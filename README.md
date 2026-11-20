@@ -30,14 +30,16 @@ Details and alternatives: [docs/01-model-selection.md](docs/01-model-selection.m
 | 3 | Thinking mode on/off | [02-setup-mlx](docs/02-setup-mlx.md) | done |
 | 3b | Image and audio input | [02-setup-mlx](docs/02-setup-mlx.md) | open |
 | 4 | Serve an API, start at login, tool calling, Pi in herdr | [03-serving-and-herdr](docs/03-serving-and-herdr.md) | done, reboot test open |
+| 4b | Demo video: chat and web search tool call in Pi | [07-demo](docs/07-demo.md) | done |
 | 5 | Measure tokens/s and memory, record results | [04-benchmarks](docs/04-benchmarks.md) | first numbers only |
 | 6 | Optional: GGUF route with llama.cpp or Ollama | [05-gguf-llama-cpp-ollama](docs/05-gguf-llama-cpp-ollama.md) | planned |
 | 7 | Optional: Apertus 1.5 70B, self-quantized to 4-bit | [06-apertus-70b](docs/06-apertus-70b.md) | planned |
 
 ## Known issues
 
-- Tool calls work only with streaming requests. The non-streaming path of mlx-vlm 0.8.0 corrupts the tool-call JSON. Details in [03-serving-and-herdr](docs/03-serving-and-herdr.md#33-tool-calling).
-- The `apertus1p5` architecture code has to be copied into mlx-vlm again after every mlx-vlm upgrade.
+- mlx-vlm 0.8.0 loses a closing brace in tool-call JSON, which breaks tool calls. A local parser patch works around it; the root cause is not found. Details in [03-serving-and-herdr](docs/03-serving-and-herdr.md#33-tool-calling).
+- The `web_search` tool searches Wikipedia only unless a Brave Search API key is set.
+- The `apertus1p5` architecture code and the parser patch have to be copied into mlx-vlm again after every mlx-vlm upgrade.
 
 ## Open questions
 
