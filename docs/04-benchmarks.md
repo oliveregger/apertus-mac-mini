@@ -1,6 +1,6 @@
 # 4. Benchmarks
 
-Status: **planned**. No measurements yet.
+Status: **first numbers only**, from single API requests on 2026-11-20. The three-run method below has not been applied yet.
 
 ## Method
 
@@ -12,8 +12,8 @@ Status: **planned**. No measurements yet.
 
 | Date | Build | Runtime + version | Prompt tok/s | Gen tok/s | Peak memory | Notes |
 |---|---|---|---|---|---|---|
-| | 8B MLX 8-bit | | | | | |
-| | 8B MLX 8-bit, thinking off | | | | | |
+| 2026-11-20 | 8B MLX 8-bit, tool call | mlx-vlm 0.8.0 server | 485 (278 tokens) | 33.5 | 10.4 GB | single request |
+| 2026-11-20 | 8B MLX 8-bit, thinking off | mlx-vlm 0.8.0 server | 592 (77 tokens) | 33.3 | 10.4 GB | single request |
 | | 8B GGUF Q4_K_M | | | | | |
 | | 70B MLX 4-bit | | | | | |
 

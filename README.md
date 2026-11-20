@@ -2,7 +2,7 @@
 
 Setup notes for running the quantized [Apertus 1.5](https://huggingface.co/swiss-ai/Apertus-v1.5-8B) model (ETH Zurich / EPFL / CSCS, Apache 2.0) locally on a Mac mini.
 
-> **Status: plan only.** Nothing below has been run on this machine yet. Each doc is marked *planned* until the step has been executed and the results recorded.
+> **Status (2026-11-20):** Apertus 1.5 8B at 8-bit runs on this machine, is served on `http://127.0.0.1:8080/v1`, and is usable for chat and tool calling from Pi inside herdr. Image and audio input, the benchmarks and the 70B model are still open.
 
 ## Machine
 
@@ -12,8 +12,8 @@ Setup notes for running the quantized [Apertus 1.5](https://huggingface.co/swiss
 | Memory | 64 GB unified |
 | Disk | 926 GB, ~849 GB free |
 | OS | macOS 27.2.1 |
-| Already installed | Homebrew, git, gh, uv, Python 3.12 (mise), Ollama 0.40.16 (server not running) |
-| Not installed | mlx-lm, mlx-vlm, llama.cpp, Hugging Face CLI |
+| Tools | Homebrew, git, gh, uv, Python 3.12 (mise), herdr 0.9.5, Pi 1.5.2, Ollama 0.40.16 (not used) |
+| Model runtime | mlx-vlm 0.8.0 and mlx-lm 0.32.2 in `~/apertus/.venv` |
 
 ## Decision
 
@@ -26,18 +26,22 @@ Details and alternatives: [docs/01-model-selection.md](docs/01-model-selection.m
 | # | Step | Doc | Status |
 |---|---|---|---|
 | 1 | Pick model, quantization and runtime | [01-model-selection](docs/01-model-selection.md) | decided |
-| 2 | Install MLX runtime, download 8B 8-bit, first text prompt | [02-setup-mlx](docs/02-setup-mlx.md) | planned |
-| 3 | Test image and audio input, thinking mode on/off | [02-setup-mlx](docs/02-setup-mlx.md) | planned |
-| 4 | Serve an OpenAI-compatible API, start at login | [03-serving](docs/03-serving.md) | planned |
-| 5 | Measure tokens/s and memory, record results | [04-benchmarks](docs/04-benchmarks.md) | planned |
+| 2 | Install MLX runtime, download 8B 8-bit, first text prompt | [02-setup-mlx](docs/02-setup-mlx.md) | done |
+| 3 | Thinking mode on/off | [02-setup-mlx](docs/02-setup-mlx.md) | done |
+| 3b | Image and audio input | [02-setup-mlx](docs/02-setup-mlx.md) | open |
+| 4 | Serve an API, start at login, tool calling, Pi in herdr | [03-serving-and-herdr](docs/03-serving-and-herdr.md) | done, reboot test open |
+| 5 | Measure tokens/s and memory, record results | [04-benchmarks](docs/04-benchmarks.md) | first numbers only |
 | 6 | Optional: GGUF route with llama.cpp or Ollama | [05-gguf-llama-cpp-ollama](docs/05-gguf-llama-cpp-ollama.md) | planned |
 | 7 | Optional: Apertus 1.5 70B, self-quantized to 4-bit | [06-apertus-70b](docs/06-apertus-70b.md) | planned |
 
+## Known issues
+
+- Tool calls work only with streaming requests. The non-streaming path of mlx-vlm 0.8.0 corrupts the tool-call JSON. Details in [03-serving-and-herdr](docs/03-serving-and-herdr.md#33-tool-calling).
+- The `apertus1p5` architecture code has to be copied into mlx-vlm again after every mlx-vlm upgrade.
+
 ## Open questions
 
-- Which use is the target: interactive chat, an API for other tools, or batch processing? This decides how much of step 4 is needed.
-- Should the API be reachable from other machines on the network, or only from localhost?
-- Is the 70B model wanted at all? It needs a Hugging Face account with the gate accepted and a 145 GB download.
+- Is the 70B model wanted? It needs a Hugging Face account with the gate accepted and a 145 GB download.
 
 ## Sources
 

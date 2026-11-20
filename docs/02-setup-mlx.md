@@ -1,86 +1,81 @@
 # 2. Setup with MLX
 
-Status: **planned**. Commands are taken from the model card and have not been run here yet. Replace this line with the date and the versions actually installed once done.
+Status: **done on 2026-11-20**. Text and thinking mode are verified. Image and audio input are not tested yet.
+
+## Installed versions
+
+| Package | Version | Model card verified against |
+|---|---|---|
+| mlx | 0.32.4 | |
+| mlx-lm | 0.32.2 | 0.31.3 |
+| mlx-vlm | 0.8.0 | 0.7.1 |
+| transformers | 5.23.0 | |
+| huggingface-hub | 2.4.0 | |
+
+Model: `m1rkocasu/Apertus-v1.5-8B-MLX-8bit`, snapshot `1050141cd58ca49ec3ce43db2a9c700720c866f3`, 9.4 GB on disk.
 
 ## 2.1 Environment
 
-A dedicated virtual environment, because the model's `install.py` patches the installed mlx-vlm package.
+A dedicated virtual environment, because the model needs extra architecture code inside the mlx-vlm package.
 
 ```sh
 mkdir -p ~/apertus && cd ~/apertus
 uv venv --python 3.12
-source .venv/bin/activate
-uv pip install mlx-vlm mlx-lm "huggingface_hub[cli]"
+uv pip install --python .venv/bin/python mlx-vlm mlx-lm "huggingface_hub[cli]"
 ```
 
-mlx-vlm 0.7 and later no longer pulls in mlx-lm, so both must be named. The model card was verified against mlx-vlm 0.7.1 and mlx-lm 0.31.3. Record the installed versions:
-
-```sh
-uv pip list | grep -i -E "mlx|huggingface"
-```
+mlx-vlm no longer pulls in mlx-lm, so both must be named.
 
 ## 2.2 Download
 
 ```sh
-hf download m1rkocasu/Apertus-v1.5-8B-MLX-8bit
+.venv/bin/hf download m1rkocasu/Apertus-v1.5-8B-MLX-8bit
 ```
 
-About 10 GB, stored in `~/.cache/huggingface/hub`. No login needed.
+No login needed. The files land in `~/.cache/huggingface/hub`.
 
-## 2.3 Architecture patch
+## 2.3 Architecture code
 
-The repo ships an `install.py` that adds the `apertus1p5` architecture to mlx-vlm. Read it first, then:
+mlx-vlm 0.8.0 ships an `apertus` architecture (the 1.0 text decoder) but not `apertus1p5`, so the model does not load out of the box. The model repo carries the missing code in an `apertus1p5/` folder (14 Python files, about 1,600 lines) and an `install.py` that copies it into mlx-vlm.
+
+`install.py` also scans `/Applications` for other copies of mlx-vlm and can write a `.pth` hook into the user site-packages. That is more than this setup needs, so the files were copied by hand into the virtual environment only:
 
 ```sh
-cd "$(hf download m1rkocasu/Apertus-v1.5-8B-MLX-8bit)"
-python install.py --check   # report only
-python install.py
+M=$(ls -d ~/.cache/huggingface/hub/models--m1rkocasu--Apertus-v1.5-8B-MLX-8bit/snapshots/*)
+D=~/apertus/.venv/lib/python3.12/site-packages/mlx_vlm/models/apertus1p5
+mkdir -p "$D" && cp -L "$M"/apertus1p5/*.py "$D"/
+.venv/bin/python -c "import mlx_vlm.models.apertus1p5 as m; print(m.Model.__name__)"
 ```
 
-It has to be re-run after every mlx-vlm upgrade. If a newer mlx-vlm supports Apertus 1.5 natively, skip this step and note it here.
+Review done before copying: the code imports only mlx, numpy, transformers and (for images) torch, torchvision and PIL. It has no network, subprocess or eval calls. Its only file write is an opt-in debug log at `~/.lmstudio/apertus1p5-trace.log`, active only if a flag file exists or `APERTUS1P5_TRACE` is set.
 
-## 2.4 First prompts
+**This copy must be repeated after every mlx-vlm upgrade**, until mlx-vlm supports `apertus1p5` upstream.
 
-Text:
+## 2.4 First prompt
 
 ```sh
-mlx_vlm.generate --model m1rkocasu/Apertus-v1.5-8B-MLX-8bit \
+.venv/bin/mlx_vlm.generate --model m1rkocasu/Apertus-v1.5-8B-MLX-8bit \
   --prompt "Erkläre in drei Sätzen, was ein FHIR Implementation Guide ist." \
-  --max-tokens 512 --temperature 0.8 --top-p 0.9
+  --max-tokens 700 --temperature 0.8 --top-p 0.9
 ```
 
-Image:
+Result: a correct three-sentence answer in German.
 
-```sh
-mlx_vlm.generate --model m1rkocasu/Apertus-v1.5-8B-MLX-8bit \
-  --image photo.jpg --prompt "What is in this picture?" --max-tokens 512
-```
-
-Audio:
-
-```sh
-mlx_vlm.generate --model m1rkocasu/Apertus-v1.5-8B-MLX-8bit \
-  --audio clip.wav --prompt "Transcribe this." --max-tokens 512
-```
-
-Recommended sampling from the model card: temperature 0.8, top_p 0.9, everything else at defaults.
+Sampling recommended by the model card: temperature 0.8, top_p 0.9.
 
 ## 2.5 Thinking mode
 
-This build renders `Deliberation: enabled` by default, where upstream defaults to off. Over the API it is switched off per request with:
+Controlled per request with `"chat_template_kwargs": {"enable_thinking": true|false}`. With it on, the reasoning arrives in a separate `reasoning` field and is written in English even for a German question. Tested with a train-time question: 600 characters of reasoning, correct answer.
 
-```json
-"chat_template_kwargs": {"enable_thinking": false}
-```
-
-Reasoning is returned as `reasoning_content`, separate from `content`. The card notes that reasoning tends to be in English even when the question is not.
+In the plain tool-call test without that parameter, no reasoning was produced, so do not rely on the model card's claim that thinking is on by default. Set it explicitly.
 
 ## 2.6 Checklist
 
-- [ ] Versions recorded
-- [ ] `install.py` read and applied
-- [ ] Text prompt answers in German, French, Italian, English
-- [ ] Image prompt works
-- [ ] Audio prompt works
-- [ ] Thinking mode toggles
-- [ ] Peak memory noted (Activity Monitor, or the peak figure `mlx_vlm.generate` prints)
+- [x] Versions recorded
+- [x] Architecture code reviewed and installed
+- [x] Text prompt answers in German
+- [ ] Text prompts in French, Italian, Romansh, English
+- [ ] Image prompt (needs `torch` and `torchvision` in the environment)
+- [ ] Audio prompt
+- [x] Thinking mode toggles
+- [x] Peak memory noted: 10.4 GB
